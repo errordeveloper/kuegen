@@ -1,14 +1,74 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 
 	"cuelang.org/go/cue"
 )
 
-func doCompileAndValidate(r *cue.Runtime, filename string) (*cue.Instance, error) {
+const (
+	templateFilename  = "template.cue"
+	instancesFilename = "instances.cue"
+
+	templateKey  = "template"
+	instancesKey = "instances"
+
+	parametersKey = "parameters"
+	outputKey     = "output"
+)
+
+type generator struct {
+	directory string
+	runtime   *cue.Runtime
+	template  *cue.Instance
+	instances []*templateInstance
+}
+
+type templateInstance struct {
+	output     string
+	parameters cue.Value
+}
+
+func (g *generator) CompileAndValidate() error {
+	// TODO: produce meanigful compilation errors
+	// TODO: produce meanigful validation errors
+	// TODO: validate the types match expections, e.g. objets not string
+
+	template, err := g.doCompile(templateFilename)
+	if err != nil {
+		return err
+	}
+
+	g.template = template
+
+	instances, err := g.doCompile(instancesFilename)
+	if err != nil {
+		return err
+	}
+
+	instancesIterator, err := instances.Lookup(instancesKey).List()
+	if err != nil {
+		return err
+	}
+
+	for instancesIterator.Next() {
+		// TODO: try using decode method instead
+		output, err := instancesIterator.Value().Lookup(outputKey).String()
+		if err != nil {
+			return err
+		}
+
+		g.instances = append(g.instances, &templateInstance{
+			output:     output,
+			parameters: instancesIterator.Value().Lookup(parametersKey),
+		})
+	}
+
+	return nil
+}
+
+func (g *generator) doCompile(filename string) (*cue.Instance, error) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -16,67 +76,47 @@ func doCompileAndValidate(r *cue.Runtime, filename string) (*cue.Instance, error
 
 	// TODO: pass reader instead of data
 
-	instance, err := r.Compile(filename, data)
+	instance, err := g.runtime.Compile(filename, data)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: validate the convetional schema
-
 	return instance, nil
-
 }
 
-func logJSON(k interface{}, v cue.Value) {
-	js, err := v.MarshalJSON()
-	if err != nil {
-		log.Fatal(err)
-	}
+func (g *generator) WriteFiles() error {
+	for _, ti := range g.instances {
+		result, err := g.template.Fill(ti.parameters, parametersKey)
+		if err != nil {
+			return err
+		}
 
-	fmt.Printf("%s: %s\n", k, string(js))
+		data, err := result.Lookup(templateKey).MarshalJSON()
+		if err != nil {
+			return err
+		}
+
+		// TODO: make directories
+		// TODO: determine mode based on umask?
+		log.Printf("writing %s\n", ti.output)
+		if err := ioutil.WriteFile(ti.output, data, 0644); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func main() {
-	var r cue.Runtime
+	g := &generator{
+		directory: ".", // TODO: set based on a flag
+		runtime:   &cue.Runtime{},
+	}
 
-	template, err := doCompileAndValidate(&r, "template.cue")
-	if err != nil {
+	if err := g.CompileAndValidate(); err != nil {
 		log.Fatal(err)
 	}
 
-	instances, err := doCompileAndValidate(&r, "instances.cue")
-	if err != nil {
+	if err := g.WriteFiles(); err != nil {
 		log.Fatal(err)
-	}
-
-	instancesObjects, err := instances.Lookup("instances").List()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	handlers := []func() error{}
-
-	for instancesObjects.Next() {
-		output := instancesObjects.Value().Lookup("output")
-		parameters := instancesObjects.Value().Lookup("parameters")
-		if err != nil {
-			log.Fatal(err)
-		}
-		handlers = append(handlers, func() error {
-			result, err := template.Fill(parameters, "parameters")
-			if err != nil {
-				return err
-			}
-			logJSON(output, result.Lookup("template"))
-
-			return nil
-		})
-	}
-
-	for _, call := range handlers {
-		err := call()
-		if err != nil {
-			log.Fatal(err)
-		}
 	}
 }
