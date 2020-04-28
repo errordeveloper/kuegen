@@ -4,13 +4,13 @@ instances: [
 			name:      "bar"
 			namespace: "ns1"
 		}
-		output: "bar.yaml"
+		output: "bar.json"
 	},
 	{
 		parameters: {
 			name:      "baz"
 			namespace: "ns1"
 		}
-		output: "baz.yaml"
+		output: "baz.json"
 	},
 ]
