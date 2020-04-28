@@ -107,6 +107,8 @@ func (g *generator) WriteFiles() error {
 }
 
 func main() {
+	// TODO: move examples into a subdir
+	// TODO: add example that imports kubernetes types
 	g := &generator{
 		directory: ".", // TODO: set based on a flag
 		runtime:   &cue.Runtime{},
