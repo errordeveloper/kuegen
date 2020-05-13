@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"cuelang.org/go/cue"
+	"github.com/errordeveloper/kue/pkg/compiler"
 )
 
 const (
@@ -24,7 +25,6 @@ const (
 type generator struct {
 	inputDirectory, outputDirectory string
 
-	runtime   *cue.Runtime
 	template  *cue.Instance
 	instances []*templateInstance
 }
@@ -39,14 +39,16 @@ func (g *generator) CompileAndValidate() error {
 	// TODO: produce meanigful validation errors
 	// TODO: validate the types match expections, e.g. objets not string
 
-	template, err := g.doCompile(templateFilename)
+	c := compiler.NewCompiler(g.inputDirectory)
+
+	template, err := c.Compile(templateFilename)
 	if err != nil {
 		return err
 	}
 
 	g.template = template
 
-	instances, err := g.doCompile(instancesFilename)
+	instances, err := c.Compile(instancesFilename)
 	if err != nil {
 		return err
 	}
@@ -70,23 +72,6 @@ func (g *generator) CompileAndValidate() error {
 	}
 
 	return nil
-}
-
-func (g *generator) doCompile(filename string) (*cue.Instance, error) {
-	filePath := filepath.Join(g.inputDirectory, filename)
-	data, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: pass reader instead of data
-
-	instance, err := g.runtime.Compile(filePath, data)
-	if err != nil {
-		return nil, err
-	}
-
-	return instance, nil
 }
 
 func (g *generator) WriteFiles() error {
@@ -124,8 +109,6 @@ func main() {
 	g := &generator{
 		inputDirectory:  *inputDirectory,
 		outputDirectory: *outputDirectory,
-
-		runtime: &cue.Runtime{},
 	}
 
 	if err := g.CompileAndValidate(); err != nil {
