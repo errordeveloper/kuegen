@@ -86,7 +86,6 @@ func (g *generator) WriteFiles() error {
 			return err
 		}
 
-		// TODO: make directories
 		// TODO: determine mode based on umask?
 		log.Printf("writing %s\n", ti.output)
 		if err := os.MkdirAll(filepath.Dir(ti.output), 0755); err != nil {
