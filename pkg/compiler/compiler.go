@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"cuelang.org/go/cue"
+	"cuelang.org/go/cue/load"
 )
 
 type Compiler struct {
@@ -35,4 +36,8 @@ func (c *Compiler) Compile(filename string) (*cue.Instance, error) {
 	}
 
 	return instance, nil
+}
+
+func (c *Compiler) BuildAll() (*cue.Instance, error) {
+	return cue.Merge(cue.Build(load.Instances([]string{c.inputDirectory}, nil))...), nil
 }
