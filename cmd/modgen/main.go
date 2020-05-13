@@ -1,8 +1,11 @@
 package main
 
 import (
+	"flag"
 	"io/ioutil"
 	"log"
+	"os"
+	"path/filepath"
 
 	"cuelang.org/go/cue"
 )
@@ -19,7 +22,8 @@ const (
 )
 
 type generator struct {
-	directory string
+	inputDirectory, outputDirectory string
+
 	runtime   *cue.Runtime
 	template  *cue.Instance
 	instances []*templateInstance
@@ -69,14 +73,15 @@ func (g *generator) CompileAndValidate() error {
 }
 
 func (g *generator) doCompile(filename string) (*cue.Instance, error) {
-	data, err := ioutil.ReadFile(filename)
+	filePath := filepath.Join(g.inputDirectory, filename)
+	data, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO: pass reader instead of data
 
-	instance, err := g.runtime.Compile(filename, data)
+	instance, err := g.runtime.Compile(filePath, data)
 	if err != nil {
 		return nil, err
 	}
@@ -99,6 +104,9 @@ func (g *generator) WriteFiles() error {
 		// TODO: make directories
 		// TODO: determine mode based on umask?
 		log.Printf("writing %s\n", ti.output)
+		if err := os.MkdirAll(filepath.Dir(ti.output), 0755); err != nil {
+			return err
+		}
 		if err := ioutil.WriteFile(ti.output, data, 0644); err != nil {
 			return err
 		}
@@ -107,11 +115,17 @@ func (g *generator) WriteFiles() error {
 }
 
 func main() {
-	// TODO: move examples into a subdir
+	inputDirectory := flag.String("input-directory", ".", "input directory to read module definition from")
+	outputDirectory := flag.String("output-directory", ".", "out directory to write generated manifest to")
+
+	flag.Parse()
+
 	// TODO: add example that imports kubernetes types
 	g := &generator{
-		directory: ".", // TODO: set based on a flag
-		runtime:   &cue.Runtime{},
+		inputDirectory:  *inputDirectory,
+		outputDirectory: *outputDirectory,
+
+		runtime: &cue.Runtime{},
 	}
 
 	if err := g.CompileAndValidate(); err != nil {
