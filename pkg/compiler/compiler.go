@@ -39,5 +39,9 @@ func (c *Compiler) Compile(filename string) (*cue.Instance, error) {
 }
 
 func (c *Compiler) BuildAll() (*cue.Instance, error) {
-	return cue.Merge(cue.Build(load.Instances([]string{c.inputDirectory}, nil))...), nil
+	instance := cue.Merge(cue.Build(load.Instances([]string{c.inputDirectory}, nil))...)
+	if instance.Err != nil {
+		return nil, instance.Err
+	}
+	return instance, nil
 }
