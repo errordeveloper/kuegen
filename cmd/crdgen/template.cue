@@ -1,6 +1,6 @@
 package cluster
 
-import "github.com/errordeveloper/kue/cmd/crdgen/types/"
+import "github.com/errordeveloper/kue/cmd/crdgen/types"
 
 ClusterTemplate :: {
 	kind:       "List"

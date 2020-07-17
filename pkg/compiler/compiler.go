@@ -39,9 +39,26 @@ func (c *Compiler) Compile(filename string) (*cue.Instance, error) {
 }
 
 func (c *Compiler) BuildAll() (*cue.Instance, error) {
-	instance := cue.Merge(cue.Build(load.Instances([]string{c.inputDirectory}, nil))...)
-	if instance.Err != nil {
-		return nil, instance.Err
+	loadedInstances := load.Instances([]string{c.inputDirectory}, nil)
+	for _, loadedInstance := range loadedInstances {
+		if loadedInstance.Err != nil {
+			return nil, loadedInstance.Err
+		}
 	}
-	return instance, nil
+
+	builtInstances := cue.Build(loadedInstances)
+	for _, builtInstance := range builtInstances {
+		if builtInstance.Err != nil {
+			return nil, builtInstance.Err
+		}
+		if err := builtInstance.Value().Validate(); err != nil {
+			return nil, err
+		}
+	}
+
+	mergedInstance := cue.Merge(builtInstances...)
+	if mergedInstance.Err != nil {
+		return nil, mergedInstance.Err
+	}
+	return mergedInstance, nil
 }
