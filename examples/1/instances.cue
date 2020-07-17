@@ -9,7 +9,7 @@ instances: [
 	{
 		parameters: {
 			name:      "baz"
-			namespace: "ns1"
+			namespace: "ns2"
 		}
 		output: "baz.json"
 	},
