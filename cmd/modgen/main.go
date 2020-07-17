@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"io/ioutil"
 	"log"
@@ -74,7 +75,7 @@ func (g *generator) CompileAndValidate() error {
 	return nil
 }
 
-func (g *generator) WriteFiles() error {
+func (g *generator) WriteFiles(prettyJSON bool) error {
 	for _, ti := range g.instances {
 		result, err := g.template.Fill(ti.parameters, parametersKey)
 		if err != nil {
@@ -86,6 +87,19 @@ func (g *generator) WriteFiles() error {
 			return err
 		}
 
+		if prettyJSON {
+			// TODO: can we get a map from cue? from a first look,
+			// cue's MarshalJSON has a few special(?) internal methods
+			temp := map[string]interface{}{}
+			err := json.Unmarshal(data, &temp)
+			if err != nil {
+				return err
+			}
+			data, err = json.MarshalIndent(temp, "", "  ")
+			if err != nil {
+				return err
+			}
+		}
 		// TODO: determine mode based on umask?
 		log.Printf("writing %s\n", ti.output)
 		if err := os.MkdirAll(filepath.Dir(ti.output), 0755); err != nil {
@@ -100,7 +114,8 @@ func (g *generator) WriteFiles() error {
 
 func main() {
 	inputDirectory := flag.String("input-directory", ".", "input directory to read module definition from")
-	outputDirectory := flag.String("output-directory", ".", "out directory to write generated manifest to")
+	outputDirectory := flag.String("output-directory", ".", "output directory to write generated manifest to")
+	prettyJSON := flag.Bool("pretty-json", true, "write pretty JSON manifest")
 
 	flag.Parse()
 
@@ -114,7 +129,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := g.WriteFiles(); err != nil {
+	if err := g.WriteFiles(*prettyJSON); err != nil {
 		log.Fatal(err)
 	}
 }
