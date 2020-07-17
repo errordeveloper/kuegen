@@ -62,3 +62,7 @@ func (c *Compiler) BuildAll() (*cue.Instance, error) {
 	}
 	return mergedInstance, nil
 }
+
+func (c *Compiler) Marshal(instance *cue.Instance) ([]byte, error) {
+	return c.runtime.Marshal(instance)
+}
