@@ -157,11 +157,12 @@ func (g *generator) WriteFiles(prettyJSON bool) error {
 			}
 		}
 		// TODO: determine mode based on umask?
-		log.Printf("writing %s\n", ti.output)
-		if err := os.MkdirAll(filepath.Dir(ti.output), 0755); err != nil {
+		filename := filepath.Join(g.outputDirectory, ti.output)
+		log.Printf("writing %s\n", filename)
+		if err := os.MkdirAll(filepath.Dir(filename), 0755); err != nil {
 			return err
 		}
-		if err := ioutil.WriteFile(ti.output, data, 0644); err != nil {
+		if err := ioutil.WriteFile(filename, data, 0644); err != nil {
 			return err
 		}
 	}
