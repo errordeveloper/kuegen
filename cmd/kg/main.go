@@ -8,8 +8,10 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"cuelang.org/go/cue"
+	"sigs.k8s.io/yaml"
 
 	"github.com/errordeveloper/kue/pkg/compiler"
 )
@@ -125,7 +127,7 @@ func (g *generator) fileExists(filename string) bool {
 	return !info.IsDir()
 }
 
-func (g *generator) WriteFiles(prettyJSON bool) error {
+func (g *generator) WriteFiles() error {
 	for _, ti := range g.instances {
 		var parameters interface{}
 		if ti.parameters != nil {
@@ -143,19 +145,28 @@ func (g *generator) WriteFiles(prettyJSON bool) error {
 			return err
 		}
 
-		if prettyJSON {
-			// TODO: can we get a map from cue? from a first look,
-			// cue's MarshalJSON has a few special(?) internal methods
-			temp := map[string]interface{}{}
-			err := json.Unmarshal(data, &temp)
+		temp := map[string]interface{}{}
+
+		useYAML := strings.HasSuffix(ti.output, ".yml") || strings.HasSuffix(ti.output, ".yaml")
+
+		// TODO: can we get a map from cue? from a first look,
+		// cue's MarshalJSON has a few special(?) internal methods
+		if err := json.Unmarshal(data, &temp); err != nil {
+			return fmt.Errorf("gerating pretty JSON: %w", err)
+		}
+
+		if useYAML {
+			data, err = yaml.Marshal(temp)
 			if err != nil {
-				return fmt.Errorf("gerating pretty JSON: %w", err)
+				return fmt.Errorf("gerating YAML: %w", err)
 			}
+		} else {
 			data, err = json.MarshalIndent(temp, "", "  ")
 			if err != nil {
 				return fmt.Errorf("gerating pretty JSON: %w", err)
 			}
 		}
+
 		// TODO: determine mode based on umask?
 		filename := filepath.Join(g.outputDirectory, ti.output)
 		log.Printf("writing %s\n", filename)
@@ -172,7 +183,6 @@ func (g *generator) WriteFiles(prettyJSON bool) error {
 func main() {
 	inputDirectory := flag.String("input-directory", ".", "input directory to read module definition from")
 	outputDirectory := flag.String("output-directory", ".", "output directory to write generated manifest to")
-	prettyJSON := flag.Bool("pretty-json", true, "write pretty JSON manifest")
 
 	flag.Parse()
 
@@ -186,7 +196,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := g.WriteFiles(*prettyJSON); err != nil {
+	if err := g.WriteFiles(); err != nil {
 		log.Fatal(err)
 	}
 }
