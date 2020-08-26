@@ -1,3 +1,5 @@
+package example1
+
 instances: [
 	{
 		parameters: {

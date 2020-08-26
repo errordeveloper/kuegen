@@ -17,8 +17,6 @@ import (
 )
 
 const (
-	templateFilename      = "template.cue"
-	instancesFilename     = "instances.cue"
 	instancesFilenameJSON = "instances.json"
 
 	templateKey  = "template"
@@ -57,7 +55,7 @@ func (g *generator) CompileAndValidate() error {
 
 	g.compiler = compiler.NewCompiler(g.inputDirectory)
 
-	template, err := g.compiler.Compile(templateFilename)
+	template, err := g.compiler.BuildAll()
 	if err != nil {
 		return err
 	}
@@ -88,12 +86,7 @@ func (g *generator) CompileAndValidate() error {
 		return nil
 	}
 
-	instances, err := g.compiler.Compile(instancesFilename)
-	if err != nil {
-		return err
-	}
-
-	instancesIterator, err := instances.Lookup(instancesKey).List()
+	instancesIterator, err := g.template.Lookup(instancesKey).List()
 	if err != nil {
 		return err
 	}
@@ -116,7 +109,7 @@ func (g *generator) CompileAndValidate() error {
 }
 
 func (g *generator) useInstancesJSON() bool {
-	return !g.fileExists(instancesFilename) && g.fileExists(instancesFilenameJSON)
+	return g.fileExists(instancesFilenameJSON)
 }
 
 func (g *generator) fileExists(filename string) bool {

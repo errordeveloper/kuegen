@@ -1,3 +1,5 @@
+package example2
+
 ClusterTemplate :: {
 	kind:       "List"
 	apiVersion: "v1"
