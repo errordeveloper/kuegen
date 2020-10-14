@@ -167,10 +167,10 @@ func (g *generator) WriteFiles() error {
 			return fmt.Errorf("cannot convert object to a list")
 		}
 
-		for _, item := range list.Items {
-			kind := item.GetKind()
-			name := item.GetName()
-			filename := filepath.Join(g.outputDirectory, fmt.Sprintf(ti.output, fmt.Sprintf("%s.%s", name, kind)))
+		for index, item := range list.Items {
+			derivedName := fmt.Sprintf("%05d-%s-%s", index, item.GetName(), strings.ToLower(item.GetKind()))
+
+			filename := filepath.Join(g.outputDirectory, fmt.Sprintf(ti.output, derivedName))
 			if err := writeFile(useYAML, item.Object, filename); err != nil {
 				return err
 			}
