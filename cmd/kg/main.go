@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"cuelang.org/go/cue"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
 	"github.com/errordeveloper/kue/pkg/compiler"
@@ -138,39 +139,71 @@ func (g *generator) WriteFiles() error {
 			return err
 		}
 
-		temp := map[string]interface{}{}
+		obj := &unstructured.Unstructured{}
 
 		useYAML := strings.HasSuffix(ti.output, ".yml") || strings.HasSuffix(ti.output, ".yaml")
+		splitFiles := strings.Contains(ti.output, "%s")
 
 		// TODO: can we get a map from cue? from a first look,
 		// cue's MarshalJSON has a few special(?) internal methods
-		if err := json.Unmarshal(data, &temp); err != nil {
-			return fmt.Errorf("gerating pretty JSON: %w", err)
+		if err := obj.UnmarshalJSON(data); err != nil {
+			return fmt.Errorf("cannot convert JSON data to unstructured Kubernetes object: %w", err)
 		}
 
-		if useYAML {
-			data, err = yaml.Marshal(temp)
-			if err != nil {
-				return fmt.Errorf("gerating YAML: %w", err)
+		if !splitFiles {
+			filename := filepath.Join(g.outputDirectory, ti.output)
+			if err := writeFile(useYAML, obj.Object, filename); err != nil {
+				return err
 			}
-		} else {
-			data, err = json.MarshalIndent(temp, "", "  ")
-			if err != nil {
-				return fmt.Errorf("gerating pretty JSON: %w", err)
+			continue
+		}
+
+		if !obj.IsList() {
+			return fmt.Errorf("cannot split files as object is not a list")
+		}
+
+		list, err := obj.ToList()
+		if err != nil {
+			return fmt.Errorf("cannot convert object to a list")
+		}
+
+		for _, item := range list.Items {
+			kind := item.GetKind()
+			name := item.GetName()
+			filename := filepath.Join(g.outputDirectory, fmt.Sprintf(ti.output, fmt.Sprintf("%s.%s", name, kind)))
+			if err := writeFile(useYAML, item.Object, filename); err != nil {
+				return err
 			}
 		}
 
-		// TODO: determine mode based on umask?
-		filename := filepath.Join(g.outputDirectory, ti.output)
-		log.Printf("writing %s\n", filename)
-		if err := os.MkdirAll(filepath.Dir(filename), 0755); err != nil {
-			return err
-		}
-		if err := ioutil.WriteFile(filename, data, 0644); err != nil {
-			return err
-		}
 	}
 	return nil
+}
+
+func writeFile(useYAML bool, obj map[string]interface{}, filename string) error {
+	var (
+		data []byte
+		err  error
+	)
+
+	if useYAML {
+		data, err = yaml.Marshal(obj)
+		if err != nil {
+			return fmt.Errorf("gerating YAML: %w", err)
+		}
+	} else {
+		data, err = json.MarshalIndent(obj, "", "  ")
+		if err != nil {
+			return fmt.Errorf("gerating pretty JSON: %w", err)
+		}
+	}
+
+	// TODO: determine mode based on umask?
+	log.Printf("writing %s\n", filename)
+	if err := os.MkdirAll(filepath.Dir(filename), 0755); err != nil {
+		return err
+	}
+	return ioutil.WriteFile(filename, data, 0644)
 }
 
 func main() {

@@ -1,0 +1,18 @@
+{
+    "instances": [
+        {
+            "parameters": {
+                "name": "foo",
+                "namespace": "ns3"
+            },
+            "output": "%s.yaml"
+        },
+        {
+            "parameters": {
+                "name": "foo",
+                "namespace": "ns3"
+            },
+            "output": "%s.json"
+        }
+    ]
+}
