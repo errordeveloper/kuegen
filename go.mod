@@ -1,4 +1,4 @@
-module github.com/errordeveloper/kue
+module github.com/errordeveloper/kuegen
 
 go 1.14
 
