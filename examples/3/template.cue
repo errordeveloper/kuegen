@@ -1,17 +1,22 @@
 package example2
 
-
 #ExampleTemplate :: {
-        apiVersion: "v1"
-        kind:       "Namespace"
-        metadata: {
-                name: "\(parameters.name)"
-                labels: name: "\(parameters.name)"
-        }
+	kind:       "List"
+	apiVersion: "v1"
+	items: [
+		{
+			apiVersion: "v1"
+			kind:       "Namespace"
+			metadata: {
+				name: parameters.name
+				labels: name: parameters.name
+			}
+		},
+	]
 }
 
 #ExampleParameters :: {
-        name:      string
+	name: string
 }
 
 parameters: #ExampleParameters

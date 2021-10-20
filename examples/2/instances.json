@@ -2,15 +2,13 @@
     "instances": [
         {
             "parameters": {
-                "name": "bar",
-                "namespace": "ns1"
+                "name": "bar"
             },
             "output": "bar.json"
         },
         {
             "parameters": {
-                "name": "baz",
-                "namespace": "ns2"
+                "name": "baz"
             },
             "output": "baz.json"
         }

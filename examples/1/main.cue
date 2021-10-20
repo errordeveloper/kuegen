@@ -1,4 +1,4 @@
-package example2
+package example1
 
 #ExampleTemplate :: {
 	apiVersion: "v1"
@@ -15,3 +15,18 @@ package example2
 
 parameters: #ExampleParameters
 template:   #ExampleTemplate
+
+instances: [
+	{
+		parameters: {
+			name: "bar"
+		}
+		output: "bar.json"
+	},
+	{
+		parameters: {
+			name: "baz"
+		}
+		output: "baz.json"
+	},
+]
