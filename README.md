@@ -170,12 +170,12 @@ _`instances.json`_:
 ```
 
 Evaluating this will result in `00000-foo-namespace.yaml` and `00000-foo-namespace.json` being written.
-The first digits in the name of these files are based on the index of the object in the list, and are
-includued in order to preserve the oreder. Second sement is the name of the object and third is its kind,
-if the object is namespace, namespaces will be in front of the name.
-Namely `%s` is subsititure with either `<index>-<name>-<kind>` or `<index>-<namespace>-<name>-<kind>`.
+The first digits in the filenames are based on the index of the object in the list, and are included in
+order to preserve the order. Second segment is the name of the object and the third is its kind, if the
+object is namespaced, name will be prefixed by that namespace.
+More specifically, `%s` is substituted with either `<index>-<name>-<kind>` or `<index>-<namespace>-<name>-<kind>`.
 Suffix given in the name of the output file will be used to determine encoding format.
 
 If `-output-directory` flag is specified, the manifests will be written there instead of the current working
-directory. The `output` path may contain directory names, which will be treated as relative to the output
-directory that was set with the `-output-directory` flag.
+directory. The output path may contain directory names, which will be treated as relative to the directory that
+was set with the `-output-directory` flag.
