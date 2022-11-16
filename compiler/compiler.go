@@ -1,68 +1,62 @@
 package compiler
 
 import (
-	"bufio"
-	"os"
-	"path/filepath"
+	"encoding/json"
+	"fmt"
+	"sync"
 
 	"cuelang.org/go/cue"
+	"cuelang.org/go/cue/cuecontext"
+	"cuelang.org/go/cue/errors"
 	"cuelang.org/go/cue/load"
 )
 
+var sharedCUEMutex = &sync.Mutex{
+	// load.Instances is not thread-safe (https://github.com/cue-lang/cue/issues/1043#issuecomment-1016729326)
+}
+
 type Compiler struct {
-	inputDirectory string
-
-	runtime *cue.Runtime
+	ctx   *cue.Context
+	mutex *sync.Mutex
 }
 
-func NewCompiler(inputDirectory string) *Compiler {
+func NewCompiler() *Compiler {
 	return &Compiler{
-		inputDirectory: inputDirectory,
-		runtime:        &cue.Runtime{},
+		ctx:   cuecontext.New(),
+		mutex: sharedCUEMutex,
 	}
 }
 
-func (c *Compiler) Compile(filename string) (*cue.Instance, error) {
-	filePath := filepath.Join(c.inputDirectory, filename)
+func (c *Compiler) BuildAll(dir, input string) (cue.Value, error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	instance, err := c.runtime.Compile(filePath, bufio.NewReader(file))
-	if err != nil {
-		return nil, err
-	}
-
-	return instance, nil
-}
-
-func (c *Compiler) BuildAll() (*cue.Instance, error) {
-	loadedInstances := load.Instances([]string{c.inputDirectory}, nil)
+	loadedInstances := load.Instances([]string{input}, &load.Config{Dir: dir})
 	for _, loadedInstance := range loadedInstances {
 		if loadedInstance.Err != nil {
-			return nil, loadedInstance.Err
+			return cue.Value{}, fmtCUEError(fmt.Sprintf("failed to load instances (dir: %q, input: %q)", dir, input), loadedInstance.Err)
 		}
 	}
 
-	builtInstances := cue.Build(loadedInstances)
+	builtInstances, err := c.ctx.BuildInstances(loadedInstances)
+	if err != nil {
+		return cue.Value{}, fmtCUEError(fmt.Sprintf("failed to build instances (dir: %q, input: %q)", dir, input), err)
+	}
 	for _, builtInstance := range builtInstances {
-		if builtInstance.Err != nil {
-			return nil, builtInstance.Err
-		}
 		if err := builtInstance.Value().Validate(); err != nil {
-			return nil, err
+			return cue.Value{}, fmtCUEError("validation failure:", err)
 		}
 	}
-
-	mergedInstance := cue.Merge(builtInstances...)
-	if mergedInstance.Err != nil {
-		return nil, mergedInstance.Err
+	if len(builtInstances) != 1 {
+		return cue.Value{}, fmt.Errorf("unexpected: more then one instance built")
 	}
-	return mergedInstance, nil
+	return builtInstances[0], nil
 }
 
-func (c *Compiler) Marshal(instance *cue.Instance) ([]byte, error) {
-	return c.runtime.Marshal(instance)
+func (c *Compiler) MarshalValueJSON(v cue.Value) ([]byte, error) {
+	return json.Marshal(v)
+}
+
+func fmtCUEError(desc string, err error) error {
+	return fmt.Errorf("%s: %s", desc, errors.Details(err, nil))
 }

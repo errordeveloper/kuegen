@@ -30,7 +30,7 @@ const (
 type generator struct {
 	inputDirectory, outputDirectory string
 
-	template  *cue.Instance
+	template  cue.Value
 	instances []*templateInstance
 
 	compiler *compiler.Compiler
@@ -54,9 +54,9 @@ func (g *generator) CompileAndValidate() error {
 	// TODO: produce meanigful validation errors
 	// TODO: validate the types match expections, e.g. objets not string
 
-	g.compiler = compiler.NewCompiler(g.inputDirectory)
+	g.compiler = compiler.NewCompiler()
 
-	template, err := g.compiler.BuildAll()
+	template, err := g.compiler.BuildAll(g.inputDirectory, ".")
 	if err != nil {
 		return err
 	}
@@ -87,19 +87,32 @@ func (g *generator) CompileAndValidate() error {
 		return nil
 	}
 
-	instancesIterator, err := g.template.Lookup(instancesKey).List()
+	instancesKeyPath := cue.ParsePath(instancesKey)
+	if err := instancesKeyPath.Err(); err != nil {
+		return err
+	}
+	instancesIterator, err := g.template.LookupPath(instancesKeyPath).List()
 	if err != nil {
+		return err
+	}
+
+	outputKeyPath := cue.ParsePath(outputKey)
+	if err := outputKeyPath.Err(); err != nil {
+		return err
+	}
+	parametersKeyPath := cue.ParsePath(parametersKey)
+	if err := parametersKeyPath.Err(); err != nil {
 		return err
 	}
 
 	for instancesIterator.Next() {
 		// TODO: try using decode method instead
-		output, err := instancesIterator.Value().Lookup(outputKey).String()
+		output, err := instancesIterator.Value().LookupPath(outputKeyPath).String()
 		if err != nil {
 			return err
 		}
 
-		parameters := instancesIterator.Value().Lookup(parametersKey)
+		parameters := instancesIterator.Value().LookupPath(parametersKeyPath)
 		g.instances = append(g.instances, &templateInstance{
 			output:     output,
 			parameters: &parameters,
@@ -129,12 +142,21 @@ func (g *generator) WriteFiles() error {
 		} else {
 			parameters = ti.parametersFromJSON
 		}
-		result, err := g.template.Fill(parameters, parametersKey)
-		if err != nil {
+
+		parametersKeyPath := cue.ParsePath(parametersKey)
+		if err := parametersKeyPath.Err(); err != nil {
+			return err
+		}
+		result := g.template.FillPath(parametersKeyPath, parameters)
+		if err := result.Err(); err != nil {
 			return err
 		}
 
-		data, err := result.Lookup(templateKey).MarshalJSON()
+		templateKeyPath := cue.ParsePath(templateKey)
+		if err := templateKeyPath.Err(); err != nil {
+			return err
+		}
+		data, err := result.LookupPath(templateKeyPath).MarshalJSON()
 		if err != nil {
 			return err
 		}
