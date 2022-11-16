@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
-	"github.com/errordeveloper/kuegen/compiler"
+	"github.com/errordeveloper/cue-utils/compiler"
 )
 
 const (

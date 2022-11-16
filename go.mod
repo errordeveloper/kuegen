@@ -4,6 +4,7 @@ go 1.17
 
 require (
 	cuelang.org/go v0.4.3
+	github.com/errordeveloper/cue-utils v0.1.0
 	k8s.io/apimachinery v0.25.4
 	sigs.k8s.io/yaml v1.3.0
 )
@@ -22,8 +23,8 @@ require (
 	github.com/mpvl/unique v0.0.0-20150818121801-cbe035fff7de // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/protocolbuffers/txtpbfmt v0.0.0-20201118171849-f6a6b3f636fc // indirect
-	golang.org/x/net v0.0.0-20220722155237-a158d28d115b // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/net v0.2.0 // indirect
+	golang.org/x/text v0.4.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
